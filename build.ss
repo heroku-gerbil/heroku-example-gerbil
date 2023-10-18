@@ -1,0 +1,22 @@
+#!/usr/bin/env gxi
+;; -*- Gerbil -*-
+;; This is the main build file for Gerbil-ethereum. Invoke it using
+;; ./build.ss [cmd]
+;; where [cmd] is typically left empty (same as "compile")
+;; Note that may you need to first:
+;;   for i in github.com/fare/gerbil-utils github.com/fare/gerbil-crypto github.com/fare/gerbil-poo github.com/fare/gerbil-persist ; do gxpkg install $i ; done
+
+(import :clan/building :clan/multicall)
+
+(def (files)
+  [(all-gerbil-modules)...
+   [exe: "server.ss" bin: "server"]])
+
+(init-build-environment!
+ name: "heroku-example-gerbil"
+ deps: '("clan"))
+
+(define-entry-point (heroku)
+  (help: "complete the heroku build"
+   getopt: [])
+  (void))

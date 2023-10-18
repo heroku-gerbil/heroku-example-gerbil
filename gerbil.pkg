@@ -1,0 +1,3 @@
+;; Heroku Example for Gerbil Scheme
+(package: heroku
+ depend: ("github.com/mighty-gerbils/gerbil-utils"))
