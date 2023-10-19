@@ -38,9 +38,18 @@
         (link (@ (rel "icon") (href "/gerbil.png") (type "image/png")))
        (body
         (h1 "Hello, " ,(inet-address->string (http-request-client req)))
-        (p "Welcome to this Heroku Example Server written in Gerbil Scheme!")
+        (p "Welcome to this "
+           (a (@ (href "https://heroku.com")) "Heroku")
+           " Example Server written in "
+           (a (@ (href "https://cons.io")) "Gerbil Scheme") "! "
+           "See the github repositories "
+           (a (@ (href "https://github.com/heroku-gerbil/heroku-example-gerbil"))
+              "for this app")
+           " and "
+           (a (@ (href "https://github.com/heroku-gerbil/heroku-buildpack-gerbil"))
+              "for the Gerbil buildpack") ".")
         (img (@ (src "/gerbil.png") (alt "Gerbil Logo")))
-        (p "You can read the " (a (@ (href "/main.ss")) "source-code for this site") ".")))))))
+        (p "This app is serving " (a (@ (href "/main.ss")) "its own source code") ".")))))))
 
 ;; /gerbil.png -- burnt into the executable at compile-time
 (def (gerbil.png-handler req res)
