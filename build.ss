@@ -10,21 +10,11 @@
 
 (import :clan/building :clan/multicall)
 
-(displayln "foo 100")
-
 (def (files)
-  (displayln "foo 250")
   [(all-gerbil-modules)...
    [exe: "main.ss" bin: "heroku-example-gerbil"]])
 
-(displayln "foo 200")
-
-(def main
-  (let ()
-    (init-build-environment!
-     name: "heroku-example-gerbil"
-     deps: '("clan")
-     spec: files)
-    (lambda x (displayln "foo 400") (begin0 (apply main x) (displayln "foo 999")))))
-
-(displayln "foo 300")
+(init-build-environment!
+ name: "heroku-example-gerbil"
+ deps: '("clan")
+ spec: files)
