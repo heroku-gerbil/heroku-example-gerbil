@@ -6,7 +6,8 @@ See the github repositories
 [for this app](https://github.com/heroku-gerbil/heroku-example-gerbil) and
 [for the Gerbil buildpack](https://github.com/heroku-gerbil/heroku-buildpack-gerbil).
 
-Test it at home with:
+## Build and test the app locally
+Build and test it at home with:
 ```shell
 gxpkg deps --install
 gxpkg build
@@ -14,7 +15,14 @@ gxpkg build
 xdg-open http://localhost:8080
 ```
 
-Test it on Heroku with:
-```
+## Build and test the app on Heroku
+Build and test it on Heroku with:
+```shell
 heroku create heroku-example-gerbil --buildpack fare/gerbil
+git push heroku master
 ```
+And point your browser where heroku tells you.
+
+## TODO
+Illustrate how to use the database from Gerbil,
+as well as any other backend services offered by Heroku, if any.
