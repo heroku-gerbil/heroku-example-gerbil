@@ -6,17 +6,25 @@
 ;; Note that may you need to first:
 ;;   for i in github.com/fare/gerbil-utils github.com/fare/gerbil-crypto github.com/fare/gerbil-poo github.com/fare/gerbil-persist ; do gxpkg install $i ; done
 
+(displayln "Building heroku-example-gerbil")
+
 (import :clan/building :clan/multicall)
 
+(displayln "foo 100")
+
 (def (files)
+  (displayln "foo 250")
   [(all-gerbil-modules)...
-   [exe: "server.ss" bin: "server"]])
+   [exe: "main.ss" bin: "heroku-example-gerbil"]])
 
-(init-build-environment!
- name: "heroku-example-gerbil"
- deps: '("clan"))
+(displayln "foo 200")
 
-(define-entry-point (heroku)
-  (help: "complete the heroku build"
-   getopt: [])
-  (void))
+(def main
+  (let ()
+    (init-build-environment!
+     name: "heroku-example-gerbil"
+     deps: '("clan")
+     spec: files)
+    (lambda x (displayln "foo 400") (begin0 (apply main x) (displayln "foo 999")))))
+
+(displayln "foo 300")

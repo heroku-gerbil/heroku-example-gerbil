@@ -3,14 +3,17 @@
 (import :std/net/httpd
         :std/net/address
         :std/text/json
+        :std/source
         :std/sugar
         :std/iter
-        :std/getopt)
+        :std/getopt
+        :std/xml)
 (export main)
 
 (def (run address)
   (let (httpd (start-http-server! address mux: (make-default-http-mux default-handler)))
     (http-register-handler httpd "/" root-handler)
+    (http-register-handler httpd "/gerbil.png" gerbil.png-handler)
     (http-register-handler httpd "/echo" echo-handler)
     (http-register-handler httpd "/headers" headers-handler)
     (http-register-handler httpd "/self" self-handler)
@@ -18,8 +21,21 @@
 
 ;; /
 (def (root-handler req res)
-  (http-response-write res 200 '(("Content-Type" . "text/plain"))
-    (string-append "hello, " (inet-address->string (http-request-client req)) "\n")))
+  (http-response-write res 200 '(("Content-Type" . "text/html"))
+    (sxml->xhtml-string
+     `(html
+       (head
+        (meta (@ (http-equiv "Content-Type") (content "text/html; charset=utf-8")))
+        (title "Heroku Example Server in Gerbil Scheme")
+        (link (@ (rel "icon") (href "/gerbil.png") (type "image/png")))
+       (body
+        (h1 "Hello, " ,(inet-address->string (http-request-client req)))
+        (p "Welcome to this Heroku Example Server written in Gerbil Scheme")))))))
+
+;; /gerbil.png
+(def (gerbil.png-handler req res)
+  (http-response-write res 200 '(("Content-Type" . "image/png"))
+    (this-source-content "gerbil.png")))
 
 ;; /echo
 (def (echo-handler req res)
@@ -68,7 +84,8 @@
     help: "A example heroku server in Gerbil Scheme"
     (option 'address "-a" "--address"
       help: "server address"
-      default: "127.0.0.1:8080")))
+      default: #f)))
 
 (def (server-main opt)
-  (run (hash-ref opt 'address)))
+  (run (or (hash-ref opt 'address)
+           (string-append "0.0.0.0:" (getenv "PORT" "8080")))))

@@ -1,1 +1,1 @@
-web: server
+web: heroku-example-gerbil
