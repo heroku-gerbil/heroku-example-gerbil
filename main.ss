@@ -30,7 +30,8 @@
         (link (@ (rel "icon") (href "/gerbil.png") (type "image/png")))
        (body
         (h1 "Hello, " ,(inet-address->string (http-request-client req)))
-        (p "Welcome to this Heroku Example Server written in Gerbil Scheme")))))))
+        (p "Welcome to this Heroku Example Server written in Gerbil Scheme"
+           (img (@ (src "/gerbil.png") (alt "Gerbil Logo"))))))))))
 
 ;; /gerbil.png
 (def (gerbil.png-handler req res)
