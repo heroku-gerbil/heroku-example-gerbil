@@ -1,23 +1,31 @@
 ;;; -*- Gerbil -*-
 ;;; Simple web server, based on vyzo's example in gerbil/src/tutorial/httpd/simpled.ss
-(import :std/net/httpd
-        :std/net/address
-        :std/text/json
-        :std/source
-        :std/sugar
-        :std/iter
-        :std/getopt
-        :std/xml)
+(import
+  :std/getopt
+  :std/iter
+  :std/misc/path
+  :std/misc/ports
+  :std/net/httpd
+  :std/net/httpd
+  :std/net/address
+  :std/text/json
+  :std/source
+  :std/sugar
+  :std/xml)
 (export main)
 
-(def (run address)
-  (let (httpd (start-http-server! address mux: (make-default-http-mux default-handler)))
-    (http-register-handler httpd "/" root-handler)
-    (http-register-handler httpd "/gerbil.png" gerbil.png-handler)
-    (http-register-handler httpd "/echo" echo-handler)
-    (http-register-handler httpd "/headers" headers-handler)
-    (http-register-handler httpd "/self" self-handler)
-    (thread-join! httpd)))
+(def data-root (make-parameter #f))
+
+(def (run address data-dir)
+  (parameterize ((data-root data-dir))
+    (let (httpd (start-http-server! address mux: (make-default-http-mux default-handler)))
+      (http-register-handler httpd "/" root-handler)
+      (http-register-handler httpd "/gerbil.png" gerbil.png-handler)
+      (http-register-handler httpd "/echo" echo-handler)
+      (http-register-handler httpd "/main.ss" file-handler)
+      (http-register-handler httpd "/headers" headers-handler)
+      (http-register-handler httpd "/self" self-handler)
+      (thread-join! httpd))))
 
 ;; /
 (def (root-handler req res)
@@ -30,13 +38,32 @@
         (link (@ (rel "icon") (href "/gerbil.png") (type "image/png")))
        (body
         (h1 "Hello, " ,(inet-address->string (http-request-client req)))
-        (p "Welcome to this Heroku Example Server written in Gerbil Scheme"
-           (img (@ (src "/gerbil.png") (alt "Gerbil Logo"))))))))))
+        (p "Welcome to this Heroku Example Server written in Gerbil Scheme!")
+        (img (@ (src "/gerbil.png") (alt "Gerbil Logo")))
+        (p "You can read the " (a (@ (href "/main.ss")) "source-code for this site") ".")))))))
 
-;; /gerbil.png
+;; /gerbil.png -- burnt into the executable at compile-time
 (def (gerbil.png-handler req res)
   (http-response-write res 200 '(("Content-Type" . "image/png"))
     (this-source-content "gerbil.png")))
+
+(def (content-type-from-extension path)
+  (case (path-extension path)
+    ((".html" ".htm") "text/html")
+    ((".txt" ".text" ".md" ".ss") "text/plain")
+    ((".png") "image/png")
+    ((".jpg" ".jpeg") "image/jpeg")
+    (else #f)))
+
+;; /main.ss -- loaded from the filesystem at runtime
+(def (file-handler req res)
+  (let* ((req-path (http-request-path req))
+         (file-path (string-append (data-root) req-path))
+         (content-type (content-type-from-extension req-path)))
+    (writeln [file-handler: req-path file-path content-type])
+    (if (and content-type (file-exists? file-path))
+      (http-response-file res `(("Content-Type" . ,content-type)) file-path)
+      (http-response-write-condition res Not-Found))))
 
 ;; /echo
 (def (echo-handler req res)
@@ -85,8 +112,13 @@
     help: "A example heroku server in Gerbil Scheme"
     (option 'address "-a" "--address"
       help: "server address"
+      default: #f)
+    (option 'data-dir "-d" "--data-dir"
+      help: "data directory"
       default: #f)))
 
 (def (server-main opt)
   (run (or (hash-ref opt 'address)
-           (string-append "0.0.0.0:" (getenv "PORT" "8080")))))
+           (string-append "0.0.0.0:" (getenv "PORT" "8080")))
+       (or (hash-ref opt 'data-dir)
+           (getenv "HOME" "/app"))))
