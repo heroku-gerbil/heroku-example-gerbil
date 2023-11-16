@@ -70,30 +70,3 @@
         (for-each x dbg-exprs dbg-thunks)
         (if thunk (x expr thunk) (void)))
       (if thunk (thunk) (void)))))
-
-(import :std/os/error :std/io/socket/socket :std/event :std/os/fd :std/error)
-
-(def (connect address timeo)
-  (DBG connect: address timeo)
-  (let* ((sockaddr (socket-address address))
-         (family (socket-address-family sockaddr)))
-    (DBG c2: sockaddr family)
-    (let* ((sock (socket family SOCK_STREAM))
-           (connected? (with-error-close sock (socket-connect sock sockaddr))))
-      (DBG c3: sock connected?)
-      (if connected?
-        sock
-        (begin
-          (unless (&wait-io! (fd-io-out sock) timeo)
-            (socket-close sock)
-            (raise-timeout connect "connection timeout" address))
-          (let (errno (socket-getsockopt sock SOL_SOCKET SO_ERROR))
-            (DBG c9: errno sock)
-            (if (fx= errno 0)
-              sock
-              (begin
-                (socket-close sock)
-                (DBG c10: errno connect address timeo (strerror errno))
-                (raise-os-error errno connect address timeo)))))))))
-
-(set! std/io/socket/socket#connect connect)
