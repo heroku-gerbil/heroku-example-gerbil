@@ -8,6 +8,13 @@
 
 (displayln "Building heroku-example-gerbil")
 
+(import :std/build-script)
+
+(defbuild-script
+  `((exe: "main.ss" bin: "heroku-example-gerbil")))
+
+#| ;; Here is how you could do it instead using gerbil-utils:
+
 (import :clan/building :clan/multicall)
 
 (def (files)
@@ -18,3 +25,4 @@
  name: "heroku-example-gerbil"
  deps: '("clan")
  spec: files)
+|#

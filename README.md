@@ -9,9 +9,23 @@ See the github repositories
 ## Build and test the app locally
 Build and test it at home with:
 ```shell
+# If you don't have a running pgsql database yet, you can create one just for this test with:
+mkdir -p pg/run &&
+(cd pg && initdb -D db &&
+  echo "unix_socket_directories = '$PWD/run'" >> db/postgresql.conf &&
+  pg_ctl -D db -l logfile start )
+export DATABASE_URL="postgres://${USER}@localhost/postgres"
+
+# Compile all the dependencies (if you added any)
 gxpkg deps --install
+
+# Build the code
 gxpkg build
-~/.gerbil/bin/heroku-example-gerbil -d $PWD &
+
+# Run the example
+~/.gerbil/bin/heroku-example-gerbil -U http://localhost:8080 &
+
+# Open your browser at the given URL
 xdg-open http://localhost:8080
 ```
 
@@ -19,9 +33,16 @@ xdg-open http://localhost:8080
 Build and test it on Heroku with:
 ```shell
 heroku create heroku-example-gerbil --buildpack fare/gerbil
+heroku addons:create heroku-postgresql:mini
+heroku config:set HEROKU_URL=$(heroku info -s | grep web_url= | cut -d= -f2)
 git push heroku master
 ```
 And point your browser where heroku tells you.
+
+When you're done playing with the app, you can destroy it with:
+```
+heroku apps:destroy --confirm heroku-example-gerbil
+```
 
 ## TODO
 Illustrate how to use the database from Gerbil,

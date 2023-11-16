@@ -1,2 +1,4 @@
 build-deps
 version.ss
+manifest.ss
+pg/

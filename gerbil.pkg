@@ -1,3 +1,5 @@
 ;; Heroku Example for Gerbil Scheme
 (package: heroku
- depend: ("github.com/mighty-gerbils/gerbil-utils"))
+ ;; If you have dependencies, add them to the list below:
+ ;depend: ("github.com/mighty-gerbils/gerbil-utils")
+ )
