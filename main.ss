@@ -13,8 +13,8 @@
   :std/misc/string
   :std/net/httpd
   :std/net/address
+  :std/net/ssl
   :std/net/uri
-  :std/os/socket ;; for debugging only
   :std/pregexp
   :std/text/json
   :std/source
@@ -24,34 +24,9 @@
   :std/text/utf8)
 (export main)
 
-(include "debug.ss")
-
 (def data-root (make-parameter #f))
 (def server-url (make-parameter "/"))
 (def database-connection (make-parameter #f))
-
-(def handlers
-  [["/" root-handler]
-   ["/gerbil.png" gerbil.png-handler]
-   ["/echo" echo-handler]
-   ["/shorten" shorten-handler]
-   ["/main.ss" file-handler]
-   ["/headers" headers-handler]
-   ["/self" self-handler]])
-
-(def (run address data-dir database-url server-url/)
-  (parameterize ((data-root data-dir)
-                 (server-url server-url/))
-    (with ([host port database user passwd] (parse-heroku-database-url database-url))
-      (DBG run: host port database user passwd)
-      (def connection (sql-connect postgresql-connect host: host port: 5432 user: user db: database passwd: passwd))
-      (DBG connection: connection)
-      (database-connection connection)
-      (sql-eval connection (pgsql-schema))
-      (DBG schema:)
-      (def httpd (start-http-server! address mux: (make-default-http-mux default-handler)))
-      (for-each (cut apply http-register-handler httpd <>) handlers)
-      (thread-join! httpd))))
 
 ;; NB: The SXML syntax is a bit awkward, but it's the de-facto "standard" in Scheme.
 ;; TODO: port Racket's scribble-html to Gerbil and use it instead.
@@ -175,14 +150,11 @@
 
 (def (shorten-form)
   '(form (@ (action "/shorten") (method "post"))
-     (p "You can create a short URL.")
+     (p "As a simple demo for using a database, you can create persistent short URLs.")
      (p (label "Full URL: " (input (@ (name "url")))))
      (p (input (@ (type "submit") (value "Shorten!"))))))
 
-(def short-urls
-  (list->hash-table
-   (map (match <> ([path . _] (let (taken (string-trim-prefix "/" path)) (cons taken taken))))
-        handlers)))
+(def short-urls (hash))
 (def short-urls-mutex (make-mutex "shorten"))
 
 #|
@@ -259,6 +231,37 @@
    (else
     (http-response-write res 404 '(("Content-Type" . "text/plain"))
                          "The gerbils couldn't find the page you're looking for.\n"))))
+
+(def handlers
+  [["/" root-handler]
+   ["/gerbil.png" gerbil.png-handler]
+   ["/echo" echo-handler]
+   ["/shorten" shorten-handler]
+   ["/main.ss" file-handler]
+   ["/headers" headers-handler]
+   ["/self" self-handler]])
+
+(def (reserve-handler-short-names)
+  (for-each
+    (match <> ([path . _]
+               (let (taken (string-trim-prefix "/" path))
+                 (hash-put! short-urls taken taken))))
+    handlers))
+
+(def (run address data-dir database-url server-url/)
+  (reserve-handler-short-names)
+  (parameterize ((data-root data-dir)
+                 (server-url server-url/))
+    (with ([host port database user passwd] (parse-heroku-database-url database-url))
+      (def connection (sql-connect postgresql-connect
+                                   host: host port: 5432 user: user db: database passwd: passwd
+                                   ssl?: (if (equal? host "localhost") 'try #t)
+                                   ssl-context: (insecure-client-ssl-context))) ;; default
+      (database-connection connection)
+      (sql-eval connection (pgsql-schema))
+      (def httpd (start-http-server! address mux: (make-default-http-mux default-handler)))
+      (for-each (cut apply http-register-handler httpd <>) handlers)
+      (thread-join! httpd))))
 
 (def (main . args)
   (write ["heroku-example-gerbil" . args]) (newline)
