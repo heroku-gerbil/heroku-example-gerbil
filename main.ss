@@ -30,7 +30,7 @@
 (def server-url (make-parameter "/"))
 (def database-connection (make-parameter #f))
 
-;; / - handler for the main page
+;; / -- handler for the main page
 ;; NB: The SXML syntax is a bit awkward, but it's the de-facto "standard" in Scheme.
 ;; TODO: port Racket's scribble-html to Gerbil and use it instead.
 (def (root-handler req res)
@@ -65,15 +65,6 @@
   (http-response-write res 200 '(("Content-Type" . "image/png"))
                        (this-source-content "gerbil.png")))
 
-;; Generic code for recognizing intended content encoding from file extensions
-(def (content-type-from-extension path)
-  (case (path-extension path)
-    ((".html" ".htm") "text/html")
-    ((".txt" ".text" ".md" ".ss") "text/plain")
-    ((".png") "image/png")
-    ((".jpg" ".jpeg") "image/jpeg")
-    (else #f)))
-
 ;; /main.ss -- Example for serving files found in the filesystem at runtime
 (def (file-handler req res)
   (let* ((req-path (http-request-path req))
@@ -83,7 +74,16 @@
       (http-response-file res `(("Content-Type" . ,content-type)) file-path)
       (http-response-write-condition res Not-Found))))
 
-;; Page that handles URL shortening
+;; Helper to recognize intended Content-Type from file extension
+(def (content-type-from-extension path)
+  (case (path-extension path)
+    ((".html" ".htm") "text/html")
+    ((".txt" ".text" ".md" ".ss") "text/plain")
+    ((".png") "image/png")
+    ((".jpg" ".jpeg") "image/jpeg")
+    (else #f)))
+
+;; /shorten -- General page that handles URL shortening
 (def (shorten-handler req res)
   (def params (with-catch false (cut form-url-decode (utf8->string (http-request-body req)))))
   (def url (assget "url" params))
@@ -116,24 +116,6 @@
 ;; In-memory cache of the shortened URL database
 (def short-urls (hash))
 (def short-urls-mutex (make-mutex "shorten"))
-
-#|
-;; Version without a database. Remove at some point.
-(def (make-short-url url)
-  (with-lock short-urls-mutex
-    (lambda ()
-      (def name (new-short-name))
-      (hash-put! short-urls name url)
-      name)))
-(def (unshorten-url short)
-  (hash-get short-urls short))
-(def (new-short-name)
-  ;; Start with two-character strings: reserve one-character paths for future uses.
-  (let (s (as-string (random-url-char) (random-url-char)))
-    (while (hash-key? short-urls s)
-      (set! s (as-string s (random-url-char))))
-    s))
-|#
 
 ;; Database definition for the shortened url table
 (def (pgsql-schema)
@@ -171,16 +153,7 @@
              (else #f))
            (catch (e) (display-exception e) #f))))
 
-;; TODO: use the one from std/db/postgres once committed
-;; Parse the DATABASE_URL from heroku into a list of server database user pass
-;; : String -> (Tuple String String String String)
-(def (parse-postgres-database-url url)
-  (match (pregexp-match "^postgres://(([^:/@]+)(:([^:/@]*))?@)?([^:/@]+)(:([0-9]+))?/(.+)$" url)
-    ([_ userpass user xpass pass host xport port database]
-     [host (and port (string->number port)) database (and userpass user) (and xpass pass)])
-    (else #f)))
-
-;; default: unshorten, or else 404
+;; default -- unshorten, or else 404
 (def (default-handler req res)
   (cond
    ;; Unshorten URL
@@ -212,14 +185,9 @@
 
   ;; Open the SQL database connection
   (def connection
-    (with ([host port database user passwd]
-           (or (parse-postgres-database-url database-url)
-               (error "Invalid database url" database-url)))
-      (sql-connect postgresql-connect
-                   host: host port: 5432 user: user db: database passwd: passwd
-                   ssl?: (if (equal? host "localhost") 'try #t)
-                   ;; TODO: investigate why the default (secure) context won't work with Heroku
-                   ssl-context: (insecure-client-ssl-context))))
+    (sql-connect postgresql-connect database-url
+                 ;; TODO: investigate why the default (secure) context won't work with Heroku
+                 ssl-context: (insecure-client-ssl-context)))
 
   ;; Initialize the Schema, if not done already
   (sql-eval connection (pgsql-schema))
