@@ -44,7 +44,8 @@ xdg-open http://localhost:8080
 ## Build and test the app on Heroku
 Build and test it on Heroku with:
 ```shell
-heroku create heroku-example-gerbil --buildpack fare/gerbil
+heroku login
+heroku create heroku-example-gerbil --buildpack heroku-gerbil/gerbil
 heroku addons:create heroku-postgresql:mini
 heroku config:set HEROKU_URL=$(heroku info -s | grep web_url= | cut -d= -f2)
 git push heroku master
